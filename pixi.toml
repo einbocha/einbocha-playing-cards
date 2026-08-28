@@ -1,0 +1,12 @@
+[workspace]
+authors = ["einbocha <65666391+einbocha@users.noreply.github.com>"]
+channels = ["conda-forge"]
+name = "playing-cards"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+rust = "*"
+rust-src = "*" # necessary for IDE support
