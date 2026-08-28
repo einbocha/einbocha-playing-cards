@@ -8,7 +8,7 @@ use std::{str::FromStr, fmt::{Display, Debug, Formatter}, hash::Hash, num::NonZe
 pub struct PlayingCard(NonZeroU8);
 
 impl PlayingCard {
-    const fn new(rank: Rank, suit: Suit) -> Self {
+    pub const fn new(rank: Rank, suit: Suit) -> Self {
         let packed: u8 = ((suit as u8) << 4) | (rank as u8);
         Self(
             NonZeroU8::new(packed).unwrap()
@@ -147,7 +147,7 @@ impl Debug for Rank {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum Suit {
     Heart = 1,
@@ -201,13 +201,13 @@ impl Debug for Suit {
     }
 }
 
-const RANKS: [Rank; 13] = [
+pub const RANKS: [Rank; 13] = [
     Rank::Two, Rank::Three, Rank::Four,
     Rank::Five, Rank::Six, Rank::Seven,
     Rank::Eight, Rank::Nine, Rank::Ten,
     Rank::Jack, Rank::Queen, Rank::King, Rank::Ace
 ];
-const SUITS: [Suit; 4] = [Suit::Heart, Suit::Diamond, Suit::Club, Suit::Spade];
+pub const SUITS: [Suit; 4] = [Suit::Heart, Suit::Diamond, Suit::Club, Suit::Spade];
 
 const fn cartesian_deck<const M: usize, const N: usize, const K: usize>(
     suits: [Suit; M], ranks: [Rank; N]
