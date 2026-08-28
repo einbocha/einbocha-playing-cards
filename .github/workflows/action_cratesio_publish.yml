@@ -1,0 +1,30 @@
+name: Crates.io Publish
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on tags like v0.1.0, v1.0.0, etc.
+
+jobs:
+  job-cratesio-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # This reads your pixi.toml, installs the exact Rust version specified,
+      # and caches the environment for faster future runs.
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: latest
+          cache: true
+
+      # Run tests using the Pixi environment
+      - run: pixi run cargo test --all-features
+
+      # Verify packaging (checks for uncommitted files, size limits, etc.)
+      - run: pixi run cargo package --no-verify
+
+      # Publish using the token you added to GitHub Secrets
+      - env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: pixi run cargo publish
