@@ -2,7 +2,7 @@
 authors = ["einbocha <65666391+einbocha@users.noreply.github.com>"]
 channels = ["conda-forge"]
 name = "einbocha-playing-cards"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
