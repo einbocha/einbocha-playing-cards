@@ -13,16 +13,13 @@ jobs:
 
       # This reads your pixi.toml, installs the exact Rust version specified,
       # and caches the environment for faster future runs.
-      - uses: prefix-dev/setup-pixi@v0.8.1
+      - uses: prefix-dev/setup-pixi@v0.10.1
         with:
           pixi-version: latest
           cache: true
 
       # Run tests using the Pixi environment
       - run: pixi run cargo test --all-features
-
-      # Verify packaging (checks for uncommitted files, size limits, etc.)
-      - run: pixi run cargo package --no-verify
 
       # Publish using the token you added to GitHub Secrets
       - env:
