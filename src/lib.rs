@@ -1,9 +1,9 @@
-use std::{str::FromStr, fmt::{Display, Debug, Formatter}, hash::Hash, num::NonZeroU8};
+use std::{str::FromStr, fmt::{Display, Debug, Formatter}, hash::Hash, num::NonZeroU8, cmp::Ordering};
 
 /// Highly performant playing card representation.
-/// Requires just one byte in memory.
-/// If an outer datatype must handle optional cards wrap it with an Option<>.
-/// The option doesn't add any additional bytes as the playing card uses a NonZeroU8 internally.
+/// Stored as a single byte in memory.
+/// Wrapping a card in an Option<> doesn't introduce any overhead
+/// as the card can be encoded internally using a NonZeroU8.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PlayingCard(NonZeroU8);
 
@@ -249,5 +249,24 @@ mod tests {
             PlayingCard::new(Rank::Ace, Suit::Club),
             PlayingCard::new(Rank::Ten, Suit::Club),
         ]);
+    }
+
+    #[test]
+    fn compare_ranks() {
+        assert_eq!(Rank::Two.cmp(&Rank::Two), Ordering::Equal);
+        assert_eq!(Rank::Two.cmp(&Rank::Three), Ordering::Less);
+        assert_eq!(Rank::Two.cmp(&Rank::Ace), Ordering::Less);
+        assert_eq!(Rank::Three.cmp(&Rank::Two), Ordering::Greater);
+        assert_eq!(Rank::Three.cmp(&Rank::Ace), Ordering::Less);
+        assert_eq!(Rank::Ace.cmp(&Rank::Two), Ordering::Greater);
+        assert_eq!(Rank::Ace.cmp(&Rank::King), Ordering::Greater);
+    }
+
+    #[test]
+    fn suit_equality() {
+        assert_eq!(Suit::Club == Suit::Club, true);
+        assert_eq!(Suit::Club == Suit::Diamond, false);
+        assert_eq!(Suit::Club == Suit::Heart, false);
+        assert_eq!(Suit::Club == Suit::Spade, false);
     }
 }
