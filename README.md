@@ -2,7 +2,7 @@
 
 This is a small high performance library for standard playing cards, written in rust.
 
-# Performance notes
+# Performance Notes
 
 
 # Setup
@@ -13,6 +13,14 @@ This is a small high performance library for standard playing cards, written in 
 
 ## Prerequisites
 - pixi
+
+# Personal Note
+
+This is my first but not last rust crate.
+Please point out any bugs, incorrect code snippets or elements that are unprofessional
+or do not meet industry standards, as I am a very busy student
+and have decided to write this repository with as little AI assistance as possible.
+But my goal is to make this a high quality sample crate, even though it's currently very tiny.
 
 # License
 
