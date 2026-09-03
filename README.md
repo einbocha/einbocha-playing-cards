@@ -9,9 +9,9 @@
 This is a small high performance library for standard playing cards, written in rust.
 
 # Performance Notes
+- `PlayingCard` uses one byte in memory.
 
-
-# Setup
+# Setup from source
 1. check the prerequisites
 2. `pixi install` creates the environment
 3. `pixi shell` to enter the environment
