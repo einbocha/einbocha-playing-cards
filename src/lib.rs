@@ -165,6 +165,25 @@ pub enum Rank {
     Ace = 14,
 }
 
+impl Rank {
+    // All Rank variants in ascending order (Rank::Two to Rank::Ace)
+    pub const ALL: [Self; 13] = [
+        Self::Two,
+        Self::Three,
+        Self::Four,
+        Self::Five,
+        Self::Six,
+        Self::Seven,
+        Self::Eight,
+        Self::Nine,
+        Self::Ten,
+        Self::Jack,
+        Self::Queen,
+        Self::King,
+        Self::Ace,
+    ];
+}
+
 impl TryFrom<u8> for Rank {
     type Error = RankError;
 
@@ -251,6 +270,11 @@ pub enum Suit {
     Spade = 3,
 }
 
+impl Suit {
+    /// All Suit variants
+    pub const ALL: [Self; 4] = [Self::Heart, Self::Diamond, Self::Club, Self::Spade];
+}
+
 impl TryFrom<u8> for Suit {
     type Error = SuitError;
 
@@ -300,28 +324,8 @@ impl Debug for Suit {
     }
 }
 
-/// All Rank variants in ascending order (Rank::Two to Rank::Ace)
-pub const RANKS: [Rank; 13] = [
-    Rank::Two,
-    Rank::Three,
-    Rank::Four,
-    Rank::Five,
-    Rank::Six,
-    Rank::Seven,
-    Rank::Eight,
-    Rank::Nine,
-    Rank::Ten,
-    Rank::Jack,
-    Rank::Queen,
-    Rank::King,
-    Rank::Ace,
-];
-
-/// All Suit variants
-pub const SUITS: [Suit; 4] = [Suit::Heart, Suit::Diamond, Suit::Club, Suit::Spade];
-
 /// Creates a deck of cards by taking the cartesian product of the given suits and ranks (all arrays)
-const fn cartesian_deck<const M: usize, const N: usize, const K: usize>(
+pub const fn cartesian_deck<const M: usize, const N: usize, const K: usize>(
     suits: [Suit; M],
     ranks: [Rank; N],
 ) -> [PlayingCard; K] {
@@ -344,11 +348,12 @@ const fn cartesian_deck<const M: usize, const N: usize, const K: usize>(
 }
 
 /// Entire standard playing card deck (52 cards: all suits and ranks from 2 to Ace)
-pub const DECK_52: [PlayingCard; RANKS.len() * SUITS.len()] = cartesian_deck(SUITS, RANKS);
+pub const DECK_52: [PlayingCard; Rank::ALL.len() * Suit::ALL.len()] =
+    cartesian_deck(Suit::ALL, Rank::ALL);
 
 /// Memory efficient HashSet like datastructure for fast existence checking, adding and removing
 /// It can keep track of any PlayingCard (once as it resembles a set).
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct CardSet(u64);
 
 impl Default for CardSet {
@@ -359,6 +364,12 @@ impl Default for CardSet {
 }
 
 impl CardSet {
+    /// Masks all 13 cards from a suit
+    const SUIT_MASK: u64 = (1_u64 << 13) - 1;
+
+    /// Masks all 4 cards with the same rank
+    const RANK_MASK: u64 = (1_u64 << 2) | (1_u64 << 18) | (1_u64 << 34) | (1_u64 << 50);
+
     /// Creates an empty CardSet
     pub fn new() -> Self {
         Self::default()
@@ -386,6 +397,16 @@ impl CardSet {
     /// Checks if the set is empty
     pub fn is_empty(&self) -> bool {
         self.0 == 0
+    }
+
+    /// Keeps only the cards in the set that are of the given suit
+    pub fn filter_by_suit(&mut self, suit: Suit) {
+        self.0 &= Self::SUIT_MASK << (suit as u8 * 16 + 2);
+    }
+
+    /// Keeps only the cards in the set that are of the given rank
+    pub fn filter_by_rank(&mut self, rank: Rank) {
+        self.0 &= Self::RANK_MASK << (rank as u8 - 2);
     }
 }
 
@@ -477,5 +498,37 @@ mod tests {
         assert_eq!(card_set.is_empty(), false);
         assert_eq!(card_set.contains(card), true);
         assert_eq!(card_set.remove(card), true);
+    }
+
+    #[test]
+    fn filter_cardset() {
+        let king: PlayingCard = PlayingCard::new(Rank::King, Suit::Club);
+        let ace: PlayingCard = PlayingCard::new(Rank::Ace, Suit::Club);
+        let ten: PlayingCard = PlayingCard::new(Rank::Ten, Suit::Club);
+        let spade: PlayingCard = PlayingCard::new(Rank::Two, Suit::Spade);
+        let diamond: PlayingCard = PlayingCard::new(Rank::Two, Suit::Diamond);
+
+        let mut a: CardSet = CardSet::new();
+        a.add(king);
+        a.add(ace);
+        a.add(ten);
+        a.add(spade);
+        a.add(diamond);
+        let mut b: CardSet = a;
+        a.filter_by_suit(Suit::Club);
+        assert_eq!(a.contains(king), true);
+        assert_eq!(a.contains(ace), true);
+        assert_eq!(a.contains(ten), true);
+
+        assert_eq!(a.contains(spade), false);
+        assert_eq!(a.contains(diamond), false);
+
+        b.filter_by_rank(Rank::Two);
+        assert_eq!(b.contains(spade), true);
+        assert_eq!(b.contains(diamond), true);
+
+        assert_eq!(b.contains(king), false);
+        assert_eq!(b.contains(ace), false);
+        assert_eq!(b.contains(ten), false);
     }
 }
