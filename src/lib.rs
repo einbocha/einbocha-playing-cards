@@ -146,7 +146,7 @@ impl Debug for PlayingCard {
     }
 }
 
-/// Rank: {2=2, ..., Kind=13, Ace=14}
+/// Rank: {2=2, ..., King=13, Ace=14}
 #[derive(PartialOrd, PartialEq, Clone, Copy, Ord, Eq)]
 #[repr(u8)]
 pub enum Rank {
@@ -358,31 +358,31 @@ impl Default for CardSet {
 
 impl CardSet {
     /// Creates an empty CardSet
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
 
     /// Adds a card to the set, returns true on addition of the card, false if the card was already present
-    fn add(&mut self, c: PlayingCard) -> bool {
+    pub fn add(&mut self, c: PlayingCard) -> bool {
         let old: u64 = self.0;
         self.0 |= 1_u64 << c.val().get();
         self.0 != old // The card was only added if the state has changed
     }
 
     /// Removes a card from the set, returns true on removal of the card, false if the card was not present
-    fn remove(&mut self, c: PlayingCard) -> bool {
+    pub fn remove(&mut self, c: PlayingCard) -> bool {
         let old: u64 = self.0;
         self.0 &= !(1_u64 << c.val().get());
         self.0 != old // The card was only removed if the state has changed
     }
 
     /// Checks if the card is present in the set
-    fn contains(&self, c: PlayingCard) -> bool {
+    pub fn contains(&self, c: PlayingCard) -> bool {
         self.0 & (1_u64 << c.val().get()) != 0
     }
 
     /// Checks if the set is empty
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.0 == 0
     }
 }
