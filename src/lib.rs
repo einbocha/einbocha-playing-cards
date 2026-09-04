@@ -7,30 +7,64 @@ use std::{
 
 /// Thrown if no Rank can be derived
 #[derive(PartialEq, Debug)]
-pub struct RankError;
+pub enum RankError {
+    InvalidString,
+    InvalidValue,
+}
+
+impl std::error::Error for RankError {}
+
+impl Display for RankError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 /// Thrown if no Suit can be derived
 #[derive(PartialEq, Debug)]
-pub struct SuitError;
+pub enum SuitError {
+    InvalidString,
+    InvalidValue,
+}
+
+impl std::error::Error for SuitError {}
+
+impl Display for SuitError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 /// Thrown if no PlayingCard can be derived
 #[derive(PartialEq, Debug)]
 pub enum PlayingCardError {
-    InvalidRank,
-    InvalidSuit,
     InvalidStringFormat,
     InvalidValue,
 }
 
+impl std::error::Error for PlayingCardError {}
+
+impl Display for PlayingCardError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 impl From<RankError> for PlayingCardError {
-    fn from(_: RankError) -> Self {
-        Self::InvalidRank
+    fn from(e: RankError) -> Self {
+        match e {
+            RankError::InvalidString => Self::InvalidStringFormat,
+            RankError::InvalidValue => Self::InvalidValue,
+        }
     }
 }
 
 impl From<SuitError> for PlayingCardError {
-    fn from(_: SuitError) -> Self {
-        Self::InvalidSuit
+    fn from(e: SuitError) -> Self {
+        match e {
+            SuitError::InvalidString => Self::InvalidStringFormat,
+            SuitError::InvalidValue => Self::InvalidValue,
+        }
     }
 }
 
@@ -43,35 +77,36 @@ pub struct PlayingCard(NonZeroU8);
 
 impl PlayingCard {
     /// Returns guaranteed a valid PlayingCard
+    /// Performance: fast (SHIFT, OR operations)
     pub const fn new(rank: Rank, suit: Suit) -> Self {
-        let packed: u8 = (suit as u8) * 13 + rank as u8;
+        let packed: u8 = ((suit as u8) << 4) | (rank as u8);
         Self(NonZeroU8::new(packed).unwrap())
     }
 
-    // u8: {2, ..., 53} -> PlayingCard
+    /// u8: {2, ..., 14, 18, ..., 30, 34, ..., 46, 50, ..., 62} -> PlayingCard
+    /// Performance: fast (AND, SHIFT operations)
     pub fn from_val(val: u8) -> Result<Self, PlayingCardError> {
-        if val >= 2 && val <= 53 {
-            Ok(Self(NonZeroU8::new(val).unwrap()))
-        } else {
-            Err(PlayingCardError::InvalidValue)
-        }
+        let _: Rank = Rank::try_from(val & 0x0F)?;
+        let _: Suit = Suit::try_from(val >> 4)?;
+        Ok(Self(NonZeroU8::new(val).unwrap()))
     }
 
-    // PlayingCard -> u8: {2, ..., 53}
+    /// PlayingCard -> u8: {2, ..., 14, 18, ..., 30, 34, ..., 46, 50, ..., 62}
+    /// Performance: fast (no operations)
     pub fn val(&self) -> NonZeroU8 {
         self.0
     }
 
     /// PlayingCard -> Rank: {2, ..., 14}
+    /// Performance: fast (AND operation)
     pub fn rank(&self) -> Rank {
-        let r: u8 = (self.0.get() - 2) % 13;
-        Rank::try_from(r + 2).unwrap()
+        Rank::try_from(self.0.get() & 0x0F).unwrap()
     }
 
     /// PlayingCard -> Suit: {0, ..., 3}
+    /// Performance: fast (SHIFT operation)
     pub fn suit(&self) -> Suit {
-        let s: u8 = (self.0.get() - 2) / 13;
-        Suit::try_from(s).unwrap()
+        Suit::try_from(self.0.get() >> 4).unwrap()
     }
 }
 
@@ -81,15 +116,19 @@ impl FromStr for PlayingCard {
     /// &str: "{rank} {suit}" -> Playingcard
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s: String = s.to_lowercase();
-        let a: Vec<&str> = s.split_whitespace().collect();
-        if a.len() != 2 {
-            Err(PlayingCardError::InvalidStringFormat)
-        } else {
-            Ok(PlayingCard::new(
-                Rank::from_str(a[0])?,
-                Suit::from_str(a[1])?,
-            ))
+        let mut parts = s.split_whitespace();
+
+        let rank_str: &str = parts.next().ok_or(PlayingCardError::InvalidStringFormat)?;
+        let suit_str: &str = parts.next().ok_or(PlayingCardError::InvalidStringFormat)?;
+
+        if parts.next().is_some() {
+            return Err(PlayingCardError::InvalidStringFormat);
         }
+
+        Ok(PlayingCard::new(
+            Rank::from_str(rank_str)?,
+            Suit::from_str(suit_str)?,
+        ))
     }
 }
 
@@ -145,7 +184,7 @@ impl TryFrom<u8> for Rank {
             12 => Ok(Self::Queen),
             13 => Ok(Self::King),
             14 => Ok(Self::Ace),
-            _ => Err(RankError),
+            _ => Err(RankError::InvalidValue),
         }
     }
 }
@@ -169,7 +208,7 @@ impl FromStr for Rank {
             "queen" => Ok(Self::Queen),
             "king" => Ok(Self::King),
             "ace" => Ok(Self::Ace),
-            _ => Err(RankError),
+            _ => Err(RankError::InvalidString),
         }
     }
 }
@@ -177,7 +216,7 @@ impl FromStr for Rank {
 impl Display for Rank {
     /// Rank -> &str: {2, ..., 10, jack, queen, king, ace}
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let s: &'static str = match self {
+        f.write_str(match self {
             Self::Two => "2",
             Self::Three => "3",
             Self::Four => "4",
@@ -191,9 +230,7 @@ impl Display for Rank {
             Self::Queen => "queen",
             Self::King => "king",
             Self::Ace => "ace",
-        };
-
-        (&mut *f).write_str(s)
+        })
     }
 }
 
@@ -224,7 +261,7 @@ impl TryFrom<u8> for Suit {
             1 => Ok(Self::Diamond),
             2 => Ok(Self::Club),
             3 => Ok(Self::Spade),
-            _ => Err(SuitError),
+            _ => Err(SuitError::InvalidValue),
         }
     }
 }
@@ -239,7 +276,7 @@ impl FromStr for Suit {
             "diamond" => Ok(Self::Diamond),
             "club" => Ok(Self::Club),
             "spade" => Ok(Self::Spade),
-            _ => Err(SuitError),
+            _ => Err(SuitError::InvalidString),
         }
     }
 }
@@ -247,14 +284,12 @@ impl FromStr for Suit {
 impl Display for Suit {
     /// Suit -> &str: {heart, diamond, club, spade}
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let s: &'static str = match self {
+        f.write_str(match self {
             Self::Heart => "heart",
             Self::Diamond => "diamond",
             Self::Club => "club",
             Self::Spade => "spade",
-        };
-
-        (&mut *f).write_str(s)
+        })
     }
 }
 
@@ -311,6 +346,47 @@ const fn cartesian_deck<const M: usize, const N: usize, const K: usize>(
 /// Entire standard playing card deck (52 cards: all suits and ranks from 2 to Ace)
 pub const DECK_52: [PlayingCard; RANKS.len() * SUITS.len()] = cartesian_deck(SUITS, RANKS);
 
+/// Memory efficient HashSet like datastructure for a fast existence checking, adding and removing
+pub struct CardSet(u64);
+
+impl Default for CardSet {
+    /// Creates an empty CardSet
+    fn default() -> Self {
+        Self(0)
+    }
+}
+
+impl CardSet {
+    /// Creates an empty CardSet
+    fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds a card to the set, returns true on addition of the card, false if the card was already present
+    fn add(&mut self, c: PlayingCard) -> bool {
+        let old: u64 = self.0;
+        self.0 |= 1_u64 << c.val().get();
+        self.0 != old // The card was only added if the state has changed
+    }
+
+    /// Removes a card from the set, returns true on removal of the card, false if the card was not present
+    fn remove(&mut self, c: PlayingCard) -> bool {
+        let old: u64 = self.0;
+        self.0 &= !(1_u64 << c.val().get());
+        self.0 != old // The card was only removed if the state has changed
+    }
+
+    /// Checks if the card is present in the set
+    fn contains(&self, c: PlayingCard) -> bool {
+        self.0 & (1_u64 << c.val().get()) != 0
+    }
+
+    /// Checks if the set is empty
+    fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -356,9 +432,9 @@ mod tests {
     #[test]
     fn from() {
         assert_eq!(Suit::from_str("club"), Ok(Suit::Club));
-        assert_eq!(Suit::from_str("hear"), Err(SuitError));
+        assert_eq!(Suit::from_str("hear"), Err(SuitError::InvalidString));
         assert_eq!(Rank::from_str("2"), Ok(Rank::Two));
-        assert_eq!(Rank::from_str("ac"), Err(RankError));
+        assert_eq!(Rank::from_str("ac"), Err(RankError::InvalidString));
         assert_eq!(Suit::try_from(0x00), Ok(Suit::Heart));
         assert_eq!(Suit::try_from(0x01), Ok(Suit::Diamond));
         assert_eq!(Suit::try_from(0x02), Ok(Suit::Club));
@@ -368,7 +444,7 @@ mod tests {
         assert_eq!(Rank::try_from(0x04), Ok(Rank::Four));
         assert_eq!(Rank::try_from(0x05), Ok(Rank::Five));
         assert_eq!(
-            PlayingCard::from_val(53),
+            PlayingCard::from_val(62),
             Ok(PlayingCard::new(Rank::Ace, Suit::Spade))
         );
         assert_eq!(
@@ -376,12 +452,28 @@ mod tests {
             Ok(PlayingCard::new(Rank::Two, Suit::Heart))
         );
         assert_eq!(
-            PlayingCard::from_val(54),
+            PlayingCard::from_val(49),
             Err(PlayingCardError::InvalidValue)
         );
         assert_eq!(
             PlayingCard::from_val(1),
             Err(PlayingCardError::InvalidValue)
         );
+
+        assert_eq!(PlayingCard::new(Rank::Two, Suit::Heart).val().get(), 2);
+    }
+
+    #[test]
+    fn card_set() {
+        let mut card_set: CardSet = CardSet::new();
+        let card: PlayingCard = PlayingCard::from_val(2).unwrap();
+        assert_eq!(card_set.is_empty(), true);
+        assert_eq!(card_set.contains(card), false);
+        assert_eq!(card_set.remove(card), false);
+        assert_eq!(card_set.add(card), true);
+        assert_eq!(card_set.add(card), false);
+        assert_eq!(card_set.is_empty(), false);
+        assert_eq!(card_set.contains(card), true);
+        assert_eq!(card_set.remove(card), true);
     }
 }
