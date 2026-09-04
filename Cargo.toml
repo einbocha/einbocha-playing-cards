@@ -1,6 +1,6 @@
 [package]
 name = "einbocha-playing-cards"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Simple high performance playing cards crate"
 license = "MIT OR Apache-2.0"
