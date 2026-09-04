@@ -346,7 +346,9 @@ const fn cartesian_deck<const M: usize, const N: usize, const K: usize>(
 /// Entire standard playing card deck (52 cards: all suits and ranks from 2 to Ace)
 pub const DECK_52: [PlayingCard; RANKS.len() * SUITS.len()] = cartesian_deck(SUITS, RANKS);
 
-/// Memory efficient HashSet like datastructure for a fast existence checking, adding and removing
+/// Memory efficient HashSet like datastructure for fast existence checking, adding and removing
+/// It can keep track of any PlayingCard (once as it resembles a set).
+#[derive(Debug)]
 pub struct CardSet(u64);
 
 impl Default for CardSet {
