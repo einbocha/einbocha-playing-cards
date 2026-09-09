@@ -2,6 +2,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
     hash::Hash,
     num::NonZeroU8,
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
     str::FromStr,
 };
 
@@ -404,6 +405,14 @@ impl CardSet {
         self.0 != old // The card was only removed if the state has changed
     }
 
+    /// Pops a card from the set and returns it.
+    /// If the set is empty None is returned.
+    #[inline(always)]
+    pub fn pop_any(&mut self) -> Option<PlayingCard> {
+        let idx: u8 = self.0.trailing_zeros() as u8;
+        PlayingCard::from_val(idx).ok()
+    }
+
     /// Checks if the card is present in the set
     #[inline(always)]
     pub const fn contains(&self, c: PlayingCard) -> bool {
@@ -414,6 +423,12 @@ impl CardSet {
     #[inline(always)]
     pub const fn is_empty(&self) -> bool {
         self.0 == 0
+    }
+
+    /// Counts the cards in the set.
+    #[inline(always)]
+    pub const fn count_cards(&self) -> u32 {
+        self.0.count_ones()
     }
 
     /// ANDs the mask with the CardSet. Every card with a 1 in the mask is kept.
@@ -441,6 +456,72 @@ impl CardSet {
             | Self::mask_suit(Suit::Diamond)
             | Self::mask_suit(Suit::Club)
             | Self::mask_suit(Suit::Spade)
+    }
+}
+
+impl BitAnd for CardSet {
+    type Output = Self;
+
+    /// Creates a new CardSet containing the cards from the mathematical intersection of the two provided CardSets.
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl BitAndAssign for CardSet {
+    /// Keeps only the cards that are in both sets (in place).
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl BitOr for CardSet {
+    type Output = Self;
+
+    /// Creates a new CardSet containing the cards from the mathematical union of the two provided CardSets.
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign for CardSet {
+    /// Adds all cards from the other set that are not yet contained (in place).
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl BitXor for CardSet {
+    type Output = Self;
+
+    /// Creates a new CardSet containing the cards form the mathematical expression: union set-minus intersection.
+    /// In other words only cards that are exactly in one of both sets are put into the new set.
+    #[inline(always)]
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl BitXorAssign for CardSet {
+    /// Cards that are in the other set are removed. Cards in the other set that are new, are added.
+    #[inline(always)]
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0;
+    }
+}
+
+impl Not for CardSet {
+    type Output = Self;
+
+    /// Creates a new CardSet containing exactly
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        // We use from_val to make sure that no unused bit flips to 1.
+        Self::from_val(!self.0)
     }
 }
 
