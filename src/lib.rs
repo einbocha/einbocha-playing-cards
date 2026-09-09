@@ -417,8 +417,16 @@ impl CardSet {
     /// If the set is empty None is returned.
     #[inline(always)]
     pub fn pop_any(&mut self) -> Option<PlayingCard> {
-        let idx: u8 = self.0.trailing_zeros() as u8;
-        PlayingCard::from_val(idx).ok()
+        if self.0 == 0 {
+            return None;
+        }
+
+        // position of lowest bit / card
+        let idx = self.0.trailing_zeros();
+        // clear lowest 1-bit (i.e. remove the respecive card): Brian Kernighan's algorithm
+        self.0 &= self.0 - 1;
+
+        Some(PlayingCard::from_val(idx as u8).unwrap()) // as the set is not empty there has to be a valid card
     }
 
     /// Checks if the card is present in the set
@@ -464,6 +472,12 @@ impl CardSet {
             | Self::mask_suit(Suit::Diamond)
             | Self::mask_suit(Suit::Club)
             | Self::mask_suit(Suit::Spade)
+    }
+
+    /// Creates an iterator over the set without consuming the set.
+    #[inline(always)]
+    pub const fn iter(&self) -> CardSetIter {
+        CardSetIter(self.0)
     }
 }
 
@@ -533,10 +547,65 @@ impl Not for CardSet {
     }
 }
 
+/// Helper struct to implement an iterator for CardSet.
+pub struct CardSetIter(u64);
+
+impl Iterator for CardSetIter {
+    type Item = PlayingCard;
+
+    /// Returns cards one by one starting with 'Two of Hearts' up to 'Ace of Hearts' and then all Diamond, Club, Spade cards.
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0 == 0 {
+            return None;
+        }
+
+        // position of lowest bit / card
+        let idx = self.0.trailing_zeros();
+        // clear lowest 1-bit (i.e. remove the respecive card): Brian Kernighan's algorithm
+        self.0 &= self.0 - 1;
+
+        Some(PlayingCard::from_val(idx as u8).unwrap()) // as the set is not empty there has to be a valid card
+    }
+
+    /// Returns the exact number of cards in the iterator (lower_bound, upper_bound).
+    #[inline(always)]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let count = self.0.count_ones() as usize;
+        (count, Some(count))
+    }
+}
+
+impl IntoIterator for CardSet {
+    type Item = PlayingCard;
+    type IntoIter = CardSetIter;
+
+    /// Consumes a CardSet and returns a CardSet-Iterator.
+    #[inline(always)]
+    fn into_iter(self) -> Self::IntoIter {
+        CardSetIter(self.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::cmp::Ordering;
+
+    #[test]
+    fn card_set_iterator() {
+        let set: CardSet = CardSet::full();
+        let mut set_iter: CardSetIter = set.iter();
+        assert_eq!(
+            set_iter.next(),
+            Some(PlayingCard::new(Rank::Two, Suit::Heart))
+        );
+        assert_eq!(
+            set_iter.next(),
+            Some(PlayingCard::new(Rank::Three, Suit::Heart))
+        );
+        assert_eq!(set_iter.size_hint(), (50 as usize, Some(50 as usize)));
+    }
 
     #[test]
     fn card_set_pop_any() {
@@ -544,6 +613,7 @@ mod tests {
         assert_eq!(a.pop_any(), None);
         a.add(PlayingCard::new(Rank::Ace, Suit::Club));
         assert_eq!(a.pop_any(), Some(PlayingCard::new(Rank::Ace, Suit::Club)));
+        assert_eq!(a, CardSet::empty());
     }
 
     #[test]
