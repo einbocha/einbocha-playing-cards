@@ -11,6 +11,9 @@ This is a small high performance library for standard playing cards, written in 
 
 # Performance Notes
 - `PlayingCard` uses one byte in memory.
+- `CardSet` is a set datastructure for `PlayingCard`s and uses four bytes in memory.
+- `CardSet` most operations are simple bit operations and should only take a few cpu cycles.
+- 
 
 # Setup from source
 1. check the prerequisites
