@@ -93,7 +93,7 @@ impl PlayingCard {
 
     /// PlayingCard -> u8: {2, ..., 14, 18, ..., 30, 34, ..., 46, 50, ..., 62}
     /// Performance: fast (no operations)
-    pub fn val(&self) -> NonZeroU8 {
+    pub const fn val(&self) -> NonZeroU8 {
         self.0
     }
 
@@ -356,57 +356,91 @@ pub const DECK_52: [PlayingCard; Rank::ALL.len() * Suit::ALL.len()] =
 #[derive(Debug, Copy, Clone)]
 pub struct CardSet(u64);
 
-impl Default for CardSet {
+impl CardSet {
     /// Creates an empty CardSet
-    fn default() -> Self {
+    #[inline(always)]
+    pub const fn new() -> Self {
+        Self::empty()
+    }
+
+    /// Creates an empty CardSet
+    #[inline(always)]
+    pub const fn empty() -> Self {
         Self(0)
     }
-}
 
-impl CardSet {
-    /// Masks all 13 cards from a suit
-    const SUIT_MASK: u64 = (1_u64 << 13) - 1;
+    /// Creates a full CardSet containing all 52 Cards
+    #[inline(always)]
+    pub const fn full() -> Self {
+        Self(Self::mask_all())
+    }
 
-    /// Masks all 4 cards with the same rank
-    const RANK_MASK: u64 = (1_u64 << 2) | (1_u64 << 18) | (1_u64 << 34) | (1_u64 << 50);
+    /// Creates a CardSet from a u64 according to its internal binary format.
+    /// Only use if really necessary.
+    #[inline(always)]
+    pub const fn from_val(val: u64) -> Self {
+        Self(val & Self::mask_all())
+    }
 
-    /// Creates an empty CardSet
-    pub fn new() -> Self {
-        Self::default()
+    /// Returns the internal bit representation.
+    #[inline(always)]
+    pub const fn val(&self) -> u64 {
+        self.0
     }
 
     /// Adds a card to the set, returns true on addition of the card, false if the card was already present
-    pub fn add(&mut self, c: PlayingCard) -> bool {
+    #[inline(always)]
+    pub const fn add(&mut self, c: PlayingCard) -> bool {
         let old: u64 = self.0;
         self.0 |= 1_u64 << c.val().get();
         self.0 != old // The card was only added if the state has changed
     }
 
     /// Removes a card from the set, returns true on removal of the card, false if the card was not present
-    pub fn remove(&mut self, c: PlayingCard) -> bool {
+    #[inline(always)]
+    pub const fn remove(&mut self, c: PlayingCard) -> bool {
         let old: u64 = self.0;
         self.0 &= !(1_u64 << c.val().get());
         self.0 != old // The card was only removed if the state has changed
     }
 
     /// Checks if the card is present in the set
-    pub fn contains(&self, c: PlayingCard) -> bool {
+    #[inline(always)]
+    pub const fn contains(&self, c: PlayingCard) -> bool {
         self.0 & (1_u64 << c.val().get()) != 0
     }
 
     /// Checks if the set is empty
-    pub fn is_empty(&self) -> bool {
+    #[inline(always)]
+    pub const fn is_empty(&self) -> bool {
         self.0 == 0
     }
 
-    /// Keeps only the cards in the set that are of the given suit
-    pub fn filter_by_suit(&mut self, suit: Suit) {
-        self.0 &= Self::SUIT_MASK << (suit as u8 * 16 + 2);
+    /// ANDs the mask with the CardSet. Every card with a 1 in the mask is kept.
+    #[inline(always)]
+    pub const fn filter_by_mask(&mut self, mask: u64) {
+        self.0 &= mask;
     }
 
-    /// Keeps only the cards in the set that are of the given rank
-    pub fn filter_by_rank(&mut self, rank: Rank) {
-        self.0 &= Self::RANK_MASK << (rank as u8 - 2);
+    /// Masks all 13 cards from a suit
+    #[inline(always)]
+    pub const fn mask_suit(suit: Suit) -> u64 {
+        (1_u64 << 13) - 1 << (suit as u8 * 16 + 2)
+    }
+
+    /// Masks all 4 cards with the same rank
+    #[inline(always)]
+    pub const fn mask_rank(rank: Rank) -> u64 {
+        ((1_u64 << 2) | (1_u64 << 18) | (1_u64 << 34) | (1_u64 << 50)) << (rank as u8 - 2)
+    }
+
+    /// Masks all 52 cards
+    #[inline(always)]
+    pub const fn mask_all() -> u64 {
+        Self::mask_suit(Suit::Heart)
+            | Self::mask_suit(Suit::Diamond)
+            | Self::mask_suit(Suit::Club)
+            | Self::mask_suit(Suit::Spade)
     }
 }
 
@@ -515,7 +549,7 @@ mod tests {
         a.add(spade);
         a.add(diamond);
         let mut b: CardSet = a;
-        a.filter_by_suit(Suit::Club);
+        a.filter_by_mask(CardSet::mask_suit(Suit::Club));
         assert_eq!(a.contains(king), true);
         assert_eq!(a.contains(ace), true);
         assert_eq!(a.contains(ten), true);
@@ -523,7 +557,7 @@ mod tests {
         assert_eq!(a.contains(spade), false);
         assert_eq!(a.contains(diamond), false);
 
-        b.filter_by_rank(Rank::Two);
+        b.filter_by_mask(CardSet::mask_rank(Rank::Two));
         assert_eq!(b.contains(spade), true);
         assert_eq!(b.contains(diamond), true);
 
