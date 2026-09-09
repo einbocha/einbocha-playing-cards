@@ -354,7 +354,7 @@ pub const DECK_52: [PlayingCard; Rank::ALL.len() * Suit::ALL.len()] =
 
 /// Memory efficient HashSet like datastructure for fast existence checking, adding and removing
 /// It can keep track of any PlayingCard (once as it resembles a set).
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct CardSet(u64);
 
 impl CardSet {
@@ -405,6 +405,14 @@ impl CardSet {
         self.0 != old // The card was only removed if the state has changed
     }
 
+    /// Removes all cards from the set, returns true if at least one cards is removed else false.
+    #[inline(always)]
+    pub const fn clear(&mut self) -> bool {
+        let old: u64 = self.0;
+        self.0 = 0;
+        self.0 != old // The Card set wasn't already empty
+    }
+
     /// Pops a card from the set and returns it.
     /// If the set is empty None is returned.
     #[inline(always)]
@@ -427,7 +435,7 @@ impl CardSet {
 
     /// Counts the cards in the set.
     #[inline(always)]
-    pub const fn count_cards(&self) -> u32 {
+    pub const fn len(&self) -> u32 {
         self.0.count_ones()
     }
 
@@ -529,6 +537,86 @@ impl Not for CardSet {
 mod tests {
     use super::*;
     use std::cmp::Ordering;
+
+    #[test]
+    fn card_set_pop_any() {
+        let mut a = CardSet::empty();
+        assert_eq!(a.pop_any(), None);
+        a.add(PlayingCard::new(Rank::Ace, Suit::Club));
+        assert_eq!(a.pop_any(), Some(PlayingCard::new(Rank::Ace, Suit::Club)));
+    }
+
+    #[test]
+    fn card_set_masking() {
+        let mut set: CardSet = CardSet::full();
+        set.filter_by_mask(CardSet::mask_all());
+        assert_eq!(set.len(), 52);
+
+        for suit in Suit::ALL {
+            let mut set: CardSet = CardSet::full();
+            set.filter_by_mask(CardSet::mask_suit(suit));
+            assert_eq!(set.len(), 13);
+            for rank in Rank::ALL {
+                assert!(set.contains(PlayingCard::new(rank, suit)))
+            }
+        }
+
+        for rank in Rank::ALL {
+            let mut set: CardSet = CardSet::full();
+            set.filter_by_mask(CardSet::mask_rank(rank));
+            assert_eq!(set.len(), 4);
+            for suit in Suit::ALL {
+                assert!(set.contains(PlayingCard::new(rank, suit)));
+            }
+        }
+    }
+
+    #[test]
+    fn card_set_bin_ops() {
+        let mut a: CardSet = CardSet::new();
+        a.add(PlayingCard::new(Rank::Ace, Suit::Club));
+        a.add(PlayingCard::new(Rank::Two, Suit::Club));
+
+        let mut b: CardSet = CardSet::new();
+        b.add(PlayingCard::new(Rank::Ace, Suit::Club));
+        b.add(PlayingCard::new(Rank::Three, Suit::Club));
+
+        // intersection
+        let intersection_ab: CardSet = a & b;
+        let mut sol: CardSet = CardSet::new();
+        sol.add(PlayingCard::new(Rank::Ace, Suit::Club));
+        assert_eq!(intersection_ab, sol);
+
+        // union
+        let union_ab: CardSet = a | b;
+        let mut sol: CardSet = CardSet::new();
+        sol.add(PlayingCard::new(Rank::Ace, Suit::Club));
+        sol.add(PlayingCard::new(Rank::Two, Suit::Club));
+        sol.add(PlayingCard::new(Rank::Three, Suit::Club));
+        assert_eq!(union_ab, sol);
+
+        // xor
+        let xor_ab: CardSet = a ^ b;
+        sol.clear();
+        sol.add(PlayingCard::new(Rank::Two, Suit::Club));
+        sol.add(PlayingCard::new(Rank::Three, Suit::Club));
+        assert_eq!(xor_ab, sol);
+
+        //not
+        let not_a = !a;
+        let mut sol = CardSet::full();
+        sol.remove(PlayingCard::new(Rank::Ace, Suit::Club));
+        sol.remove(PlayingCard::new(Rank::Two, Suit::Club));
+        assert_eq!(not_a, sol);
+    }
+
+    #[test]
+    fn card_set_clear_full_count() {
+        let mut set: CardSet = CardSet::full();
+        assert_eq!(set.len(), 52);
+        set.clear();
+        assert_eq!(set, CardSet::empty());
+    }
 
     #[test]
     fn cartesian_deck_small() {
