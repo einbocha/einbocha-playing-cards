@@ -10,11 +10,11 @@ keywords = ["cards", "playing-cards", "deck", "doppelkopf", "poker"]
 categories = ["games", "simulation", "data-structures"]
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", optional = true }
 schemars = { version = "1.2", optional = true }
 
 [dev-dependencies]
 serde_json = "1.0"
 
 [features]
-schema = ["dep:schemars"]
+schema = ["dep:schemars", "serde"]
