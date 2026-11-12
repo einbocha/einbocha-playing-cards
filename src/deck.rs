@@ -11,6 +11,8 @@ pub const fn cartesian_deck<const M: usize, const N: usize, const K: usize>(
     suits: [Suit; M],
     ranks: [Rank; N],
 ) -> [PlayingCard; K] {
+    assert!(K == M * N, "M * N == K must hold");
+
     let mut result: [PlayingCard; K] = [PlayingCard::new(ranks[0], suits[0]); K];
 
     let mut idx: usize = 0;
