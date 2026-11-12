@@ -100,8 +100,8 @@ impl CardSet {
 
     /// Counts the cards in the set.
     #[inline(always)]
-    pub const fn len(&self) -> u32 {
-        self.0.count_ones()
+    pub const fn len(&self) -> usize {
+        self.0.count_ones() as usize
     }
 
     /// ANDs the mask with the CardSet. Every card with a 1 in the mask is kept.
