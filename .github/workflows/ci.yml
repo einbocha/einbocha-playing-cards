@@ -1,0 +1,62 @@
+# Checks for every pull request and every push to main. cd.yml calls this workflow as well, so a
+# release passes exactly the same checks.
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # A new push to a pull request cancels its outdated run; runs on main and on tags are never
+  # cancelled once started.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  rust:
+    name: rust
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Everything from pixi.lock, so CI builds with exactly the versions of local development.
+      - name: Install the pixi environment
+        id: toolchain
+        uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
+        with:
+          pixi-version: v0.83.0
+          # Only main writes the cache: every ref can restore it, whereas a cache written by a pull
+          # request or a tag is visible to that ref only.
+          cache-write: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every check runs even if an earlier one failed, so one run reports all findings.
+      - name: fmt
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
+        run: pixi run fmt
+      - name: clippy
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
+        run: pixi run lint
+      - name: tests (unit and integration)
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
+        run: pixi run test
+      - name: docs
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: pixi run doc
