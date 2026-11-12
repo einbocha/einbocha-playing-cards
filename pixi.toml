@@ -1,10 +1,15 @@
 [workspace]
 channels = ["conda-forge"]
 name = "einbocha-playing-cards"
-platforms = ["osx-arm64", "linux-64"]
+platforms = ["osx-arm64", "linux-64", "win-64"]
 
 [tasks]
+fmt = "cargo fmt --all --check"
+lint = "cargo clippy --workspace --all-targets --all-features -- -D warnings"
+test = "cargo test --workspace"
+doc = "cargo doc --workspace --no-deps --all-features"
+check = { depends-on = ["fmt", "lint", "test", "doc"] }
 
 [dependencies]
-rust = "*"
-rust-src = "*" # necessary for IDE support
+rust = "==1.99.1"
+rust-src = "==1.99.1"
