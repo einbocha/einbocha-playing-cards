@@ -3,7 +3,7 @@
 [![Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Ftokei.kojix2.net%2Fbadge%2Fgithub%2Feinbocha%2Feinbocha-playing-cards%2Flines&style=for-the-badge&color=4D76AE&logo=rust)](https://github.com/einbocha/einbocha-playing-cards)
 [![Total Downloads](https://img.shields.io/crates/d/einbocha-playing-cards?style=for-the-badge&color=fc8d62&logo=rust)](https://crates.io/crates/einbocha-playing-cards)
 [![Docs.rs](https://img.shields.io/docsrs/einbocha-playing-cards?style=for-the-badge&logo=docs.rs)](https://docs.rs/einbocha-playing-cards)
-[![License](https://img.shields.io/crates/l/einbocha-playing-cards?style=for-the-badge)](https://github.com/einbocha/einbocha-playing-cards/blob/main/LICENSE)
+![License](https://img.shields.io/crates/l/einbocha-playing-cards?style=for-the-badge)
 
 # einbocha-playing-cards
 
@@ -11,9 +11,8 @@ This is a small high performance library for standard playing cards, written in 
 
 # Performance Notes
 - `PlayingCard` uses one byte in memory.
-- `CardSet` is a set datastructure for `PlayingCard`s and uses four bytes in memory.
+- `CardSet` is a set datastructure for `PlayingCard`s and uses eight bytes in memory.
 - `CardSet` most operations are simple bit operations and should only take a few cpu cycles.
-- 
 
 # Setup from source
 1. check the prerequisites

@@ -67,7 +67,7 @@ impl From<SuitValueError> for PlayingCardValueError {
 /// Stored as a single byte in memory.
 /// Wrapping a card in an Option<> doesn't introduce any overhead
 /// as the card can be encoded internally using a NonZeroU8.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PlayingCard(NonZeroU8);
 
 impl PlayingCard {
@@ -138,6 +138,24 @@ impl Debug for PlayingCard {
     /// PlayingCard -> Display trait
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde_impls {
+    use super::PlayingCard;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+
+    impl Serialize for PlayingCard {
+        fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+            s.collect_str(self) // via Display: "ace heart"
+        }
+    }
+
+    impl<'de> Deserialize<'de> for PlayingCard {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            String::deserialize(d)?.parse().map_err(de::Error::custom) // via FromStr, so validated
+        }
     }
 }
 

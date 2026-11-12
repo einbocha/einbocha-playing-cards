@@ -42,7 +42,7 @@ impl Display for RankStringError {
 }
 
 /// Rank: {2=2, ..., King=13, Ace=14}
-#[derive(PartialOrd, PartialEq, Clone, Copy, Ord, Eq)]
+#[derive(PartialOrd, PartialEq, Clone, Copy, Ord, Eq, Hash)]
 #[repr(u8)]
 pub enum Rank {
     Two = 2,
@@ -108,7 +108,9 @@ impl FromStr for Rank {
 
     /// &str: {2, ..., 10, jack, queen, king, ace} -> Rank
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        let s = s.to_lowercase();
+
+        match s.as_ref() {
             "2" => Ok(Self::Two),
             "3" => Ok(Self::Three),
             "4" => Ok(Self::Four),
@@ -122,7 +124,7 @@ impl FromStr for Rank {
             "queen" => Ok(Self::Queen),
             "king" => Ok(Self::King),
             "ace" => Ok(Self::Ace),
-            s => Err(RankStringError::new(s.to_string())),
+            _ => Err(RankStringError::new(s)),
         }
     }
 }
@@ -152,6 +154,24 @@ impl Debug for Rank {
     /// Rank -> Display trait
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde_impls {
+    use super::Rank;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+
+    impl Serialize for Rank {
+        fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+            s.collect_str(self) // via Display: "ace"
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Rank {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            String::deserialize(d)?.parse().map_err(de::Error::custom) // via FromStr, so validated
+        }
     }
 }
 
