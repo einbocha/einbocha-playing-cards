@@ -42,7 +42,7 @@ impl Display for SuitStringError {
 }
 
 /// Suit: {Heart=0, Diamond=1, Club=2, Spade=3}
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum Suit {
     Heart = 0,
@@ -77,12 +77,14 @@ impl FromStr for Suit {
 
     /// &str: {heart, diamond, club, spade} -> Suit
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        let s = s.to_lowercase();
+
+        match s.as_ref() {
             "heart" => Ok(Self::Heart),
             "diamond" => Ok(Self::Diamond),
             "club" => Ok(Self::Club),
             "spade" => Ok(Self::Spade),
-            s => Err(SuitStringError::new(s.to_string())),
+            _ => Err(SuitStringError::new(s)),
         }
     }
 }
@@ -103,6 +105,24 @@ impl Debug for Suit {
     /// Suit -> Display trait
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde_impls {
+    use super::Suit;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+
+    impl Serialize for Suit {
+        fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+            s.collect_str(self) // via Display: "heart"
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Suit {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            String::deserialize(d)?.parse().map_err(de::Error::custom) // via FromStr, so validated
+        }
     }
 }
 

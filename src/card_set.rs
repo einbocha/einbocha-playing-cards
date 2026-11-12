@@ -5,7 +5,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 
 /// Memory efficient HashSet like datastructure for fast existence checking, adding and removing
 /// It can keep track of any PlayingCard (once as it resembles a set).
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct CardSet(u64);
 
 impl Default for CardSet {
@@ -241,6 +241,28 @@ impl IntoIterator for CardSet {
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
         CardSetIter(self.0)
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde_impls {
+    use super::{CardSet, PlayingCard};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    impl Serialize for CardSet {
+        fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+            s.collect_seq(self.iter()) // via PlayingCard's Serialize: ["2 heart", "ace spade"]
+        }
+    }
+
+    impl<'de> Deserialize<'de> for CardSet {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            let mut set = CardSet::new();
+            for card in Vec::<PlayingCard>::deserialize(d)? {
+                set.add(card); // like HashSet, a duplicate card is kept once
+            }
+            Ok(set)
+        }
     }
 }
 
